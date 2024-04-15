@@ -6,7 +6,7 @@ phases:
   build:
     commands:
       - echo "copying airflow_dag to dag folder"
-      - aws s3 cp airflow_dag.py s3://pyspark-scripts-for-projects/food-delivery/dags/
+      - aws s3 cp airflow_dag.py s3://pyspark-scripts-for-projects/dags/
       - echo "copying pyspark script to s3 folder"
       - aws s3 cp pyspark_job.py s3://pyspark-scripts-for-projects/food-delivery/pyspark-scripts/
   post_build:
