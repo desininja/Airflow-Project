@@ -37,7 +37,7 @@ S3_sensor_task_1 = S3KeySensor(task_id='New_S3_object_detection_dag',
 
 emr_spark_job_task_2 = EmrAddStepsOperator(
     task_id = 'run_spark_job_on_emr',
-    job_flow_id='' ,#emr id,
+    job_flow_id='j-MKSS7JCYE4EK' ,#emr id,
     aws_conn_id ='aws_default',
     steps=[{
         'Name': 'Run PySpark Script',
@@ -58,7 +58,7 @@ emr_spark_job_task_2 = EmrAddStepsOperator(
 
 step_checker_task3 = EmrStepSensor(
     task_id='check_step',
-    job_flow_id = '', #emr_id
+    job_flow_id = 'j-MKSS7JCYE4EK', #emr_id
     step_id="{{tasl_instance.xcom_pull(task_ids='run_spark_job_on_emr',key='return_value')[0]}}",
     aws_conn_id = 'aws_default',
     poke_interval=120,
