@@ -1,0 +1,14 @@
+version: 0.2
+phases:
+  pre_build:
+    commands:
+      - echo "Copying files to the respective S3 locations"
+  build:
+    commands:
+      - echo "copying airflow_dag to dag folder"
+      - aws s3 cp airflow_dag.py s3://pyspark-scripts-for-projects/food-delivery/dags/
+      - echo "copying pyspark script to s3 folder"
+      - aws s3 cp pyspark_job.py s3://pyspark-scripts-for-projects/food-delivery/pyspark-scripts/
+  post_build:
+    commands:
+      - echo "Deployment complete!"
