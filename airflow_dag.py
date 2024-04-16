@@ -6,7 +6,7 @@ from airflow.providers.amazon.aws.sensors.emr import EmrStepSensor
 
 
 S3_bucket_name = 'food-delivery-project'
-folder_path = 'landing-zone/food_delivery_*.csv'
+folder_path = 'landing-zone/food_delivery.csv'
 
 default_args = {
     'owner':'airflow',
