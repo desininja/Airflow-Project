@@ -49,7 +49,7 @@ emr_spark_job_task_2 = EmrAddStepsOperator(
                 '--deploy-mode',
                 'cluster',
                 's3://pyspark-scripts-for-projects/food-delivery/pyspark_job.py',
-                S3_sensor_task_1.s3_key,
+                "{{ task_instance.xcom_pull(task_ids='New_S3_object_detection_dag', key='xcom_push')[0] }}",
             ]
         }
     }],
