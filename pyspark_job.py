@@ -1,79 +1,70 @@
 import sys 
+import logging
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, when
-from pyspark.sql.types import StructType, StructField, StringType,  DoubleType, TimestampType,IntegerType
+from pyspark.sql.types import StructType, StructField, StringType, DoubleType, TimestampType, IntegerType
 
+# Configure logging
+logging.basicConfig(filename='pyspark_script.log', level=logging.ERROR,
+                    format='%(asctime)s:%(levelname)s:%(message)s')
 
 def main(s3_file_path):
-    
-    spark = SparkSession.builder.appName("Transforming Food Delivery Data").getOrCreate()
+    try:
+        # Create a Spark session
+        spark = SparkSession.builder.appName("Transforming Food Delivery Data").getOrCreate()
 
-    schema = StructType([
-        StructField('order_id',IntegerType(),True),
-        StructField('customer_id',IntegerType(),True),
-        StructField('restaurant_id',IntegerType(),True),
-        StructField('order_time',TimestampType(),True),
-        StructField('customer_location',StringType(),True),
-        StructField('restaurant_location',StringType(),True),
-        StructField('order_value',DoubleType(),True),
-        StructField('rating',DoubleType(),True),
-        StructField('delivery_time',TimestampType(),True)
+        # Define schema
+        schema = StructType([
+            StructField('order_id', IntegerType(), True),
+            StructField('customer_id', IntegerType(), True),
+            StructField('restaurant_id', IntegerType(), True),
+            StructField('order_time', TimestampType(), True),
+            StructField('customer_location', StringType(), True),
+            StructField('restaurant_location', StringType(), True),
+            StructField('order_value', DoubleType(), True),
+            StructField('rating', DoubleType(), True),
+            StructField('delivery_time', TimestampType(), True)
         ])
 
+        # Read the data from S3
+        df = spark.read.csv(s3_file_path, schema=schema, header=True)
+        df.printSchema()
 
-    df =spark.read.csv(s3_file_path,schema=schema,header=True)
+        # Validate the data
+        df_validated = df.filter(
+            (df.order_time.isNotNull()) &
+            (df.delivery_time.isNotNull()) &
+            (df.order_value > 0)
+        )
 
-    df.printSchema()
+        # Transform the data
+        df_transformed = df_validated.withColumn('delivery_duration',
+                                                 (df_validated.delivery_time - df_validated.order_time).cast('long') / 60)
+        df_transformed.show(4)
 
-    df_validated = df.filter(
-    (df.order_time.isNotNull()) &
-    (df.delivery_time.isNotNull())&
-    (df.order_value>0)
-    )
-    
-    df_transformed = df_validated.withColumn('delivery_duration',
-                                         (df_validated.delivery_time - df_validated.order_time).cast('long') / 60)
+        # Categorize orders based on value
+        low_threshold = 500
+        high_threshold = 1200
 
+        df_transformed = df_transformed.withColumn('order_category',
+                                                   when(col('order_value') < low_threshold, "Low")
+                                                   .when((col('order_value') >= low_threshold) & (col('order_value') <= high_threshold), 'Medium')
+                                                   .otherwise("High"))
 
-    df_transformed.show(4)
+        df_transformed.show(4)
 
-    low_threshold = 500
-    high_threshold = 1200
+        # Writing the transformed data into a staging area in Amazon S3
+        output_s3_path = 's3://food-delivery-project/output-files/'
+        df_transformed.write.csv(output_s3_path)
 
-    df_transformed = df_transformed.withColumn('order_category',
-                                          when(col('order_value')<low_threshold,"Low")
-                                          .when((col('order_value')>=low_threshold)& (col('order_value')<=high_threshold),'Medium')
-                                          .otherwise("High"))
+        # Stop the Spark session
+        spark.stop()
 
-    df_transformed.show(4)
-
-    #writing the transformed data into a staging area in Amazon Redshift
-    output_s3_path = 's3://food-delivery-project/output-files/'
-    df_transformed.write.csv(output_s3_path)
-    
-    '''
-    # Configure Redshift connection settings
-    redshift_url = "jdbc:redshift://your-redshift-cluster:5439/your-database"
-    redshift_user = "your-username"
-    redshift_password = "your-password"
-    temp_s3_path = "s3://food-delivery-project/temp-folder/"  # Temporary data path in S3 for Redshift
-
-
-    df_transformed.write \
-        .format("com.databricks.spark.redshift") \
-        .option('url',redshift_url) \
-        .option('user',redshift_user) \
-        .option('password',redshift_password) \
-        .option('dbtable','food_delivery_data') \
-        .option('tempdir',temp_s3_path) \
-        .mode("append")\
-        .save()
-    '''
-    spark.stop()
+    except Exception as e:
+        # Log the error
+        logging.error(f"An error occurred: {e}")
 
 if __name__ == "__main__":
-    import sys 
-    s3_file_path = sys.argv[1]
+    s3_file_path = 's3://food-delivery-project/landing-zone/food_delivery.csv' #sys.argv[1]
     print(f"Processing file: {s3_file_path}")
     main(s3_file_path)
-
