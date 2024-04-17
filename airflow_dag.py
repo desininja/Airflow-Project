@@ -36,23 +36,13 @@ S3_sensor_task_1 = S3KeySensor(
 )
 
 # Logging the value from XCom
+logging.info("CHECK HERE")
 logging.info("XCom value for New_S3_object_detection_dag: %s", S3_sensor_task_1.xcom_push)
 
 # EmrAddStepsOperator Task
-def get_s3_file_path(ti):
-    # Retrieve file path from XCom
-    xcom_value = ti.xcom_pull(task_ids='New_S3_object_detection_dag', key='xcom_push')
-    
-    # Check if xcom_value is valid
-    if not xcom_value:
-        logging.warning("XCom value is None or empty, skipping task.")
-        return None
-
-    return xcom_value[0]
-
 emr_spark_job_task_2 = EmrAddStepsOperator(
     task_id='run_spark_job_on_emr',
-    job_flow_id='j-HBDIR87CSSQC',  # Replace with your EMR job flow ID
+    job_flow_id='j-2HJM11AYZLN88',  # Replace with your EMR job flow ID
     aws_conn_id='aws_default',
     steps=[
         {
@@ -76,7 +66,7 @@ emr_spark_job_task_2 = EmrAddStepsOperator(
 # EmrStepSensor Task
 step_checker_task3 = EmrStepSensor(
     task_id='check_step',
-    job_flow_id='j-HBDIR87CSSQC',  # Replace with your EMR job flow ID
+    job_flow_id='j-2HJM11AYZLN88',  # Replace with your EMR job flow ID
     step_id="{{ task_instance.xcom_pull(task_ids='run_spark_job_on_emr', key='return_value')[0] }}",
     aws_conn_id='aws_default',
     poke_interval=120,
