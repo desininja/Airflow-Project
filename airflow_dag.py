@@ -41,6 +41,8 @@ def log_xcom_value(ti):
     xcom_value = ti.xcom_pull(task_ids='New_S3_object_detection_dag', key='return_value')
     if xcom_value:
         logging.info("XCom value for New_S3_object_detection_dag: %s", xcom_value)
+    else:
+        logging.info("Xcom value is Null!!!!!!!!!!!!!!!!!!!!!!!!")
 
 log_xcom_value_task = PythonOperator(
     task_id='log_xcom_value_task',
@@ -63,8 +65,7 @@ emr_spark_job_task_2 = EmrAddStepsOperator(
                     'spark-submit',
                     '--deploy-mode',
                     'cluster',
-                    's3://pyspark-scripts-for-projects/food-delivery/pyspark_job.py',
-                    's3://food-delivery-project/landing-zone/food_delivery.csv',
+                    's3://pyspark-scripts-for-projects/food-delivery/pyspark_job.py'
                 ]
             }
         }
