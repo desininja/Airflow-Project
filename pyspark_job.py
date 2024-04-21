@@ -2,7 +2,6 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, when
 from pyspark.sql.types import StructType, StructField, StringType, DoubleType, TimestampType, IntegerType
 
-
 s3_file_path = 's3://food-delivery-project/landing-zone/' #sys.argv[1]
 # Create a Spark session
 spark = SparkSession.builder.appName("Transforming Food Delivery Data").getOrCreate()
@@ -49,20 +48,31 @@ df_transformed.show(4)
 
         # Writing the transformed data into a staging area in Amazon S3
 output_s3_path = 's3://food-delivery-project/output-files/first_file.csv'
-df_transformed.write.csv(output_s3_path)
+df_transformed.write.csv(output_s3_path,mode="overwrite")
 
-
-jdbc_url = "jdbc:redshift://redshift-cluster-1.cqsv0dlaf0ry.us-east-1.redshift.amazonaws.com:5439/dev"
+username = 'awsuser'
+password ='Welcome_123'
+jdbc_url = f"jdbc:redshift://redshift-cluster-1.cqsv0dlaf0ry.us-east-1.redshift.amazonaws.com:5439/dev?user={username}&password={password}"
 aws_iam_role = "arn:aws:iam::767398036887:role/service-role/AmazonRedshift-CommandsAccessRole-20240404T130502"
 temp_dir="s3://food-delivery-project/temp-folder/"
 target_table = 'food_delivery'
 table_schema = "order_id int, customer_id int, restaurant_id int, order_time timestamp, customer_location string, restaurant_location string, order_value double, rating double, delivery_time timestamp"
-create_table_query = f"""CREATE TABLE IF NOT EXISTS {target_table} ({table_schema})
-                                 USING io.github.spark_redshift_community.spark.redshift"""
+create_table_query = f"""
+    CREATE TABLE IF NOT EXISTS {target_table} ({table_schema})
+    USING io.github.spark_redshift_community.spark.redshift
+    OPTIONS (
+        url '{jdbc_url}',
+        tempdir '{temp_dir}',
+        dbtable '{target_table}',
+        aws_iam_role '{aws_iam_role}'
+    )
+"""
 
+
+# Now you can execute the create_table_query using Spark SQL
+spark.sql(create_table_query).show()
 #writing data to redshift with options
-try:
-    df_transformed.write \
+df_transformed.write \
         .format("io.github.spark_redshift_community.spark.redshift") \
         .option("url",jdbc_url) \
         .option("dbtable",target_table) \
@@ -70,9 +80,5 @@ try:
         .option("aws_iam_role", aws_iam_role) \
         .mode("overwrite") \
         .save()
-    print(f"Data written to Redshift table: {target_table}")
-except Exception as e:
-    print(f"Error writing data  to Redshift: {e}")
-    
-        # Stop the Spark session
+print(f"Data written to Redshift table: {target_table}")
 spark.stop()
