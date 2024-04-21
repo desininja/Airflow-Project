@@ -7,6 +7,8 @@ phases:
     commands:
       - echo "copying airflow_dag to dag folder"
       - aws s3 cp airflow_dag.py s3://food-delivery-project-airflow/dags/
+      - echo "copying New airflow_dag to dag folder"
+      - aws s3 cp airflow_dag_new.py s3://food-delivery-project-airflow/dags/
       - echo "copying requirements file to s3 bucket"
       - aws s3 cp requirements.txt s3://food-delivery-project-airflow/ 
       - echo "copying pyspark script to s3 folder"
