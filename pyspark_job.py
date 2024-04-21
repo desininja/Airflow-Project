@@ -1,20 +1,15 @@
-import sys 
-import logging
+
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, when
 from pyspark.sql.types import StructType, StructField, StringType, DoubleType, TimestampType, IntegerType
 
-# Configure logging
-logging.basicConfig(filename='pyspark_script.log', level=logging.ERROR,
-                    format='%(asctime)s:%(levelname)s:%(message)s')
 
-def main(s3_file_path):
-    try:
-        # Create a Spark session
-        spark = SparkSession.builder.appName("Transforming Food Delivery Data").getOrCreate()
+s3_file_path = 's3://food-delivery-project/landing-zone/' #sys.argv[1]
+# Create a Spark session
+spark = SparkSession.builder.appName("Transforming Food Delivery Data").getOrCreate()
 
-        # Define schema
-        schema = StructType([
+# Define schema
+schema = StructType([
             StructField('order_id', IntegerType(), True),
             StructField('customer_id', IntegerType(), True),
             StructField('restaurant_id', IntegerType(), True),
@@ -27,44 +22,35 @@ def main(s3_file_path):
         ])
 
         # Read the data from S3
-        df = spark.read.csv(s3_file_path, schema=schema, header=True)
-        df.printSchema()
+df = spark.read.csv(s3_file_path, schema=schema, header=True)
+df.printSchema()
 
         # Validate the data
-        df_validated = df.filter(
+df_validated = df.filter(
             (df.order_time.isNotNull()) &
             (df.delivery_time.isNotNull()) &
             (df.order_value > 0)
         )
 
         # Transform the data
-        df_transformed = df_validated.withColumn('delivery_duration',
+df_transformed = df_validated.withColumn('delivery_duration',
                                                  (df_validated.delivery_time - df_validated.order_time).cast('long') / 60)
-        df_transformed.show(4)
+df_transformed.show(4)
 
         # Categorize orders based on value
-        low_threshold = 500
-        high_threshold = 1200
+low_threshold = 500
+high_threshold = 1200
 
-        df_transformed = df_transformed.withColumn('order_category',
+df_transformed = df_transformed.withColumn('order_category',
                                                    when(col('order_value') < low_threshold, "Low")
                                                    .when((col('order_value') >= low_threshold) & (col('order_value') <= high_threshold), 'Medium')
                                                    .otherwise("High"))
 
-        df_transformed.show(4)
+df_transformed.show(4)
 
         # Writing the transformed data into a staging area in Amazon S3
-        output_s3_path = 's3://food-delivery-project/output-files/'
-        df_transformed.write.csv(output_s3_path)
+output_s3_path = 's3://food-delivery-project/output-files/first_file.csv'
+df_transformed.write.csv(output_s3_path)
 
         # Stop the Spark session
-        spark.stop()
-
-    except Exception as e:
-        # Log the error
-        logging.error(f"An error occurred: {e}")
-
-if __name__ == "__main__":
-    s3_file_path = 's3://food-delivery-project/landing-zone/food_delivery.csv' #sys.argv[1]
-    print(f"Processing file: {s3_file_path}")
-    main(s3_file_path)
+spark.stop()
