@@ -53,7 +53,7 @@ log_xcom_value_task = PythonOperator(
 # EmrAddStepsOperator task
 emr_spark_job_task_2 = EmrAddStepsOperator(
     task_id='run_spark_job_on_emr',
-    job_flow_id='j-2HJM11AYZLN88',  # Replace with your EMR job flow ID
+    job_flow_id='j-7MILHQSIRJDA',  # Replace with your EMR job flow ID
     aws_conn_id='aws_default',
     steps=[
         {
@@ -76,7 +76,7 @@ emr_spark_job_task_2 = EmrAddStepsOperator(
 # EmrStepSensor task
 step_checker_task_3 = EmrStepSensor(
     task_id='check_step',
-    job_flow_id='j-2HJM11AYZLN88',  # Replace with your EMR job flow ID
+    job_flow_id='j-7MILHQSIRJDA',  # Replace with your EMR job flow ID
     step_id="{{ ti.xcom_pull(task_ids='run_spark_job_on_emr', key='return_value')[0] }}",
     aws_conn_id='aws_default',
     poke_interval=120,
